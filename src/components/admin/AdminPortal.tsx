@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthUser, UserRole } from '../../types';
 import { authFetch, getAuthToken } from '../../utils/api';
+import { ConfirmationModal } from '../modals/ConfirmationModal';
 
 interface AdminStats {
   overview: {
@@ -98,6 +99,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
   const [inspectTab, setInspectTab] = useState<'summary' | 'json'>('summary');
   const [liveMetricsRaw, setLiveMetricsRaw] = useState<any>(null);
   const [accessDenied, setAccessDenied] = useState<boolean>(false);
+  const [userToToggleStatus, setUserToToggleStatus] = useState<{
+    id: string;
+    fullName: string;
+    currentStatus: boolean;
+  } | null>(null);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
+  const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
   // Fetch admin data
   const fetchAdminData = async () => {
@@ -173,13 +181,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
   };
 
   // Toggle user account active status (Enable / Disable)
-  const handleToggleUserStatus = async (userId: string, currentStatus: boolean, fullName: string) => {
-    const newStatus = !currentStatus;
-    const actionLabel = newStatus ? "réactiver" : "suspendre / désactiver";
-    if (!window.confirm(`Confirmez-vous vouloir ${actionLabel} le compte de ${fullName} ?`)) {
-      return;
-    }
+  const handleToggleUserStatus = (userId: string, currentStatus: boolean, fullName: string) => {
+    setStatusActionError(null);
+    setUserToToggleStatus({ id: userId, currentStatus, fullName });
+  };
 
+  const handleConfirmToggleUserStatus = async () => {
+    if (!userToToggleStatus) return;
+    const { id: userId, currentStatus } = userToToggleStatus;
+    const newStatus = !currentStatus;
+
+    setIsUpdatingStatus(true);
+    setStatusActionError(null);
     try {
       const res = await authFetch(`/api/admin/users/${userId}/status`, {
         method: 'PUT',
@@ -190,13 +203,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
         }),
       });
       if (res.ok) {
+        setUserToToggleStatus(null);
         fetchAdminData();
       } else {
         const data = await res.json();
-        alert(data.error || "Erreur lors de la modification du statut du compte.");
+        setStatusActionError(data.error || "Erreur lors de la modification du statut du compte.");
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Erreur activation/désactivation utilisateur:', e);
+      setStatusActionError(e.message || 'Erreur réseau');
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -1347,6 +1364,53 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for user status toggle */}
+      <ConfirmationModal
+        isOpen={Boolean(userToToggleStatus)}
+        onClose={() => {
+          if (!isUpdatingStatus) {
+            setUserToToggleStatus(null);
+            setStatusActionError(null);
+          }
+        }}
+        onConfirm={handleConfirmToggleUserStatus}
+        isLoading={isUpdatingStatus}
+        title={
+          userToToggleStatus?.currentStatus
+            ? "Suspendre / Désactiver ce compte ?"
+            : "Réactiver ce compte utilisateur ?"
+        }
+        description={
+          userToToggleStatus ? (
+            <div className="space-y-2">
+              <p>
+                {userToToggleStatus.currentStatus ? (
+                  <>
+                    Voulez-vous suspendre l'accès de l'utilisateur <strong className="text-slate-900 dark:text-white font-bold">{userToToggleStatus.fullName}</strong> ? L'utilisateur ne pourra plus se connecter.
+                  </>
+                ) : (
+                  <>
+                    Voulez-vous réactiver le compte de l'utilisateur <strong className="text-slate-900 dark:text-white font-bold">{userToToggleStatus.fullName}</strong> ?
+                  </>
+                )}
+              </p>
+              {statusActionError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-300 text-xs">
+                  {statusActionError}
+                </div>
+              )}
+            </div>
+          ) : ''
+        }
+        confirmLabel={
+          userToToggleStatus?.currentStatus
+            ? "Suspendre le compte"
+            : "Réactiver le compte"
+        }
+        cancelLabel="Annuler"
+        variant={userToToggleStatus?.currentStatus ? "danger" : "success"}
+      />
 
     </div>
   );

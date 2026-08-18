@@ -23,13 +23,14 @@ import { exportCVToPDF } from './utils/pdfExport';
 import { authFetch } from './utils/api';
 import { validateCVData } from './utils/cvValidator';
 import { UnsavedChangesModal } from './components/modals/UnsavedChangesModal';
+import { MobileNavDrawer } from './components/navigation/MobileNavDrawer';
 import { 
   FileText, Download, Share2, Mail, Globe, Sparkles, Layers, 
   Server, User, Briefcase, GraduationCap, Cpu, FolderGit2, 
   Award, Palette, ZoomIn, ZoomOut, Check, ArrowLeft, RefreshCw,
   Plus, Eye, Smartphone, Monitor, ChevronRight, Layout,
   ShieldCheck, ShieldAlert, LogIn, LogOut, UserCheck, Shield, Home, Cloud, Lock, Edit3,
-  Save, AlertCircle, AlertTriangle, Loader2
+  Save, AlertCircle, AlertTriangle, Loader2, Menu, X
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
@@ -38,6 +39,7 @@ export function App() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
+  const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState<boolean>(false);
 
   // 1. URL Router Check (Public page check ?p=slug, or Admin portal ?admin=true / ?view=admin)
   const [publicSlug, setPublicSlug] = useState<string | null>(null);
@@ -649,29 +651,29 @@ export function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-800 font-sans">
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           
-          {/* Left: Brand Logo & Navigation */}
-          <div className="flex items-center gap-6">
+          {/* Left: Brand Logo & Desktop Navigation */}
+          <div className="flex items-center gap-4 lg:gap-6 min-w-0">
             <button 
-              onClick={() => setCurrentView('home')} 
-              className="flex items-center gap-2.5 text-left group cursor-pointer focus:outline-hidden"
+              onClick={() => navigateWithUnsavedCheck(() => setCurrentView('home'))} 
+              className="flex items-center gap-2 sm:gap-2.5 text-left group cursor-pointer focus:outline-hidden shrink-0"
               title="Retour à l'accueil"
             >
-              <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-                <FileText className="w-5 h-5 text-white" />
+              <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-linear-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform shrink-0">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-base tracking-tight text-white group-hover:text-sky-300 transition-colors">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <span className="font-bold text-sm sm:text-base tracking-tight text-white group-hover:text-sky-300 transition-colors">
                   CV Studio
                 </span>
-                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
+                <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
                   Cloud
                 </span>
               </div>
             </button>
 
-            {/* Primary Navigation Tabs */}
+            {/* Desktop Primary Navigation Tabs */}
             <nav className="hidden md:flex items-center gap-1.5">
               <button
                 onClick={() => navigateWithUnsavedCheck(() => setCurrentView('home'))}
@@ -711,17 +713,17 @@ export function App() {
             </nav>
           </div>
 
-          {/* Right: Key Actions & Profile */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          {/* Right: Key Actions & Mobile Menu Button */}
+          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
             {currentView === 'editor' && (
               <>
-                {/* 1. Modèles & Design button in top bar */}
+                {/* 1. Modèles & Design button (hidden on mobile, in drawer & form) */}
                 <button
                   onClick={() => {
                     setActiveEditorTab('theme');
                     if (mobileTab === 'preview') setMobileTab('form');
                   }}
-                  className={`flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer ring-1 ring-white/20 ${
+                  className={`hidden sm:flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer ring-1 ring-white/20 ${
                     activeEditorTab === 'theme'
                       ? 'bg-indigo-600 text-white ring-indigo-400'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
@@ -729,8 +731,8 @@ export function App() {
                   title="Changer de modèle, couleurs et polices"
                 >
                   <Palette className="w-4 h-4 text-indigo-300" />
-                  <span className="hidden sm:inline">Modèle & Style</span>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/20 text-white truncate max-w-[110px]">
+                  <span className="hidden md:inline">Modèle & Style</span>
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/20 text-white truncate max-w-[90px] md:max-w-[110px]">
                     {TEMPLATES_META.find(t => t.id === currentCv.templateId)?.name || 'Modèle'}
                   </span>
                 </button>
@@ -740,7 +742,7 @@ export function App() {
                   type="button"
                   onClick={() => handleSave()}
                   disabled={isSaving}
-                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50 ${
+                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50 min-h-[38px] ${
                     hasUnsavedChanges
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400/60 shadow-md animate-pulse-subtle'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -750,12 +752,12 @@ export function App() {
                   {isSaving ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-300" />
-                      <span>Sauvegarde...</span>
+                      <span className="hidden sm:inline">Sauvegarde...</span>
                     </>
                   ) : hasUnsavedChanges ? (
                     <>
                       <Save className="w-3.5 h-3.5 text-white" />
-                      <span>Enregistrer</span>
+                      <span className="hidden sm:inline">Enregistrer</span>
                       <span className="w-2 h-2 rounded-full bg-amber-300 animate-ping inline-block" />
                     </>
                   ) : (
@@ -766,20 +768,20 @@ export function App() {
                   )}
                 </button>
 
-                {/* 4. Email Share button */}
+                {/* 3. Email Share button (Desktop only) */}
                 <button
                   onClick={() => setIsShareEmailOpen(true)}
-                  className="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px]"
                   title="Partager votre CV directement par email"
                 >
                   <Mail className="w-3.5 h-3.5 text-sky-400" />
-                  <span className="hidden sm:inline">Email</span>
+                  <span>Email</span>
                 </button>
 
-                {/* 5. Share / Publish modal */}
+                {/* 4. Share / Publish button */}
                 <button
                   onClick={() => setIsPublishModalOpen(true)}
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px] ${
                     currentCv.isPublished
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -787,35 +789,35 @@ export function App() {
                   title={!isAuthenticated ? "Mode anonyme : Se connecter pour garder le CV et déployer le CV" : "Partager et publier sur le web"}
                 >
                   {!isAuthenticated ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Globe className="w-3.5 h-3.5 text-emerald-400" />}
-                  <span className="hidden sm:inline">
+                  <span className="hidden md:inline">
                     {currentCv.isPublished ? 'En Ligne' : 'Publier'}
                   </span>
                 </button>
 
-                {/* 6. Main Action: Télécharger PDF */}
+                {/* 5. Main Action: Télécharger PDF */}
                 <button
                   onClick={handleExportPDF}
                   disabled={isExportingPDF}
-                  className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 min-h-[38px]"
                   title="Télécharger votre CV en PDF haute résolution"
                 >
                   <Download className="w-4 h-4" />
-                  <span>{isExportingPDF ? 'Export...' : 'PDF'}</span>
+                  <span className="hidden xs:inline">{isExportingPDF ? '...' : 'PDF'}</span>
                 </button>
               </>
             )}
 
-            {/* User Profile / Auth Button */}
+            {/* Desktop User Profile / Auth Button */}
             {isAuthenticated && user ? (
-              <div className="relative">
+              <div className="relative hidden md:block">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs text-slate-200 transition-all cursor-pointer"
+                  className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs text-slate-200 transition-all cursor-pointer min-h-[38px]"
                 >
                   <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] ${user.role === 'ADMIN' ? 'bg-rose-500/30 text-rose-300' : 'bg-sky-500/30 text-sky-300'}`}>
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
-                  <span className="hidden sm:inline font-semibold text-white">
+                  <span className="font-semibold text-white truncate max-w-[100px]">
                     {user.fullName.split(' ')[0]}
                   </span>
                 </button>
@@ -876,38 +878,55 @@ export function App() {
                   setAuthModalMode('login');
                   setIsAuthModalOpen(true);
                 }}
-                className="flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                className="hidden md:flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer min-h-[38px]"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Connexion</span>
               </button>
             )}
+
+            {/* Mobile Hamburger Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileDrawerOpen(true)}
+              className="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer"
+              title="Menu de navigation"
+              aria-label="Menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
       {/* Mobile Tab Switcher */}
-      <div className="md:hidden bg-slate-900 text-white border-b border-slate-800 px-3 py-2 flex items-center justify-around text-xs font-bold gap-1">
+      <div className="md:hidden bg-slate-900 text-white border-b border-slate-800 px-2 py-1.5 flex items-center justify-around text-xs font-bold gap-1">
         <button
           onClick={() => navigateWithUnsavedCheck(() => setCurrentView('home'))}
-          className={`py-1.5 px-2.5 rounded-lg flex items-center gap-1 ${currentView === 'home' ? 'bg-sky-600 text-white' : 'text-slate-400'}`}
+          className={`flex-1 py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
+            currentView === 'home' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
         >
-          <Home className="w-3 h-3" />
+          <Home className="w-3.5 h-3.5" />
           <span>Accueil</span>
         </button>
         <button
           onClick={() => setCurrentView('editor')}
-          className={`py-1.5 px-2.5 rounded-lg flex items-center gap-1 ${currentView === 'editor' ? 'bg-sky-600 text-white' : 'text-slate-400'}`}
+          className={`flex-1 py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
+            currentView === 'editor' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
         >
-          <FileText className="w-3 h-3" />
+          <FileText className="w-3.5 h-3.5" />
           <span>Studio</span>
         </button>
         <button
           onClick={() => navigateWithUnsavedCheck(() => setCurrentView('dashboard'))}
-          className={`py-1.5 px-2.5 rounded-lg flex items-center gap-1 ${currentView === 'dashboard' ? 'bg-sky-600 text-white' : 'text-slate-400'}`}
+          className={`flex-1 py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
+            currentView === 'dashboard' ? 'bg-sky-600 text-white font-bold' : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
         >
-          <Layers className="w-3 h-3" />
-          <span>Mes CVs</span>
+          <Layers className="w-3.5 h-3.5" />
+          <span>Mes CVs ({cvList.length})</span>
         </button>
       </div>
 
@@ -1306,6 +1325,27 @@ export function App() {
               />
             </div>
           </div>
+
+          {/* Floating Mobile Toggle Button (Only on mobile/small screens in editor) */}
+          <div className="lg:hidden fixed bottom-5 right-5 z-30">
+            <button
+              type="button"
+              onClick={() => setMobileTab(mobileTab === 'form' ? 'preview' : 'form')}
+              className="px-4 py-2.5 rounded-full bg-slate-900/95 text-white border border-slate-700 shadow-2xl backdrop-blur-xs flex items-center gap-2 text-xs font-bold hover:bg-slate-800 transition-all cursor-pointer ring-2 ring-sky-500/40"
+            >
+              {mobileTab === 'form' ? (
+                <>
+                  <Eye className="w-4 h-4 text-sky-400" />
+                  <span>Aperçu du CV</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4 text-sky-400" />
+                  <span>Modifier le formulaire</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1333,6 +1373,35 @@ export function App() {
           </div>
         </div>
       </footer>
+
+      {/* MOBILE NAVIGATION DRAWER */}
+      <MobileNavDrawer
+        isOpen={isMobileDrawerOpen}
+        onClose={() => setIsMobileDrawerOpen(false)}
+        currentView={currentView}
+        onNavigate={(view) => navigateWithUnsavedCheck(() => setCurrentView(view))}
+        cvCount={cvList.length}
+        currentCv={currentCv}
+        hasUnsavedChanges={hasUnsavedChanges}
+        isSaving={isSaving}
+        onSave={() => handleSave()}
+        onOpenTheme={() => {
+          setActiveEditorTab('theme');
+          setMobileTab('form');
+        }}
+        onOpenShareEmail={() => setIsShareEmailOpen(true)}
+        onOpenPublish={() => setIsPublishModalOpen(true)}
+        onExportPDF={handleExportPDF}
+        isExportingPDF={isExportingPDF}
+        user={user}
+        isAuthenticated={isAuthenticated}
+        onOpenAuth={(mode) => {
+          setAuthModalMode(mode || 'login');
+          setIsAuthModalOpen(true);
+        }}
+        onLogout={logout}
+        onOpenAdmin={() => navigateWithUnsavedCheck(() => setIsAdminMode(true))}
+      />
 
       {/* MODALS */}
       {/* 1. Direct Email Share Modal */}

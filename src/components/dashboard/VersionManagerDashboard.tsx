@@ -5,6 +5,7 @@ import {
   FileText, Plus, Copy, Trash2, Globe, Edit3, Eye, Search, 
   CheckCircle2, Clock, Sparkles, Layers, ArrowUpRight, Lock, LogIn, ShieldAlert 
 } from 'lucide-react';
+import { ConfirmationModal } from '../modals/ConfirmationModal';
 
 interface VersionManagerDashboardProps {
   cvList: CVListItem[];
@@ -31,6 +32,7 @@ export const VersionManagerDashboard: React.FC<VersionManagerDashboardProps> = (
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<'all' | 'published' | 'draft'>('all');
+  const [cvToDelete, setCvToDelete] = useState<CVListItem | null>(null);
 
   const filteredList = cvList.filter(item => {
     const matchesSearch = 
@@ -45,6 +47,13 @@ export const VersionManagerDashboard: React.FC<VersionManagerDashboardProps> = (
 
   const getTemplateMeta = (templateId: TemplateId) => {
     return TEMPLATES_META.find(t => t.id === templateId) || TEMPLATES_META[0];
+  };
+
+  const handleConfirmDelete = () => {
+    if (cvToDelete) {
+      onDelete(cvToDelete.id);
+      setCvToDelete(null);
+    }
   };
 
   return (
@@ -231,7 +240,7 @@ export const VersionManagerDashboard: React.FC<VersionManagerDashboardProps> = (
 
                   {cvList.length > 1 && (
                     <button
-                      onClick={() => onDelete(cv.id)}
+                      onClick={() => setCvToDelete(cv)}
                       title="Supprimer cette version"
                       className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                     >
@@ -244,6 +253,31 @@ export const VersionManagerDashboard: React.FC<VersionManagerDashboardProps> = (
           );
         })}
       </div>
+
+      {/* Confirmation Modal for deleting CV version */}
+      <ConfirmationModal
+        isOpen={Boolean(cvToDelete)}
+        onClose={() => setCvToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Supprimer cette version du CV ?"
+        description={
+          cvToDelete ? (
+            <div className="space-y-2">
+              <p>
+                Êtes-vous sûr de vouloir supprimer définitivement le document <strong className="text-slate-900 dark:text-white font-bold">« {cvToDelete.title} »</strong> ({cvToDelete.candidateRole}) ?
+              </p>
+              {cvToDelete.isPublished && (
+                <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-xs">
+                  ⚠️ Ce CV est actuellement déployé en ligne. Sa page web publique deviendra inaccessible.
+                </div>
+              )}
+            </div>
+          ) : ''
+        }
+        confirmLabel="Supprimer définitivement"
+        cancelLabel="Conserver le CV"
+        variant="danger"
+      />
     </div>
   );
 };

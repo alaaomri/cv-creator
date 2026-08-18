@@ -449,6 +449,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </>
                 )}
               </button>
+
+              {/* Quick Admin Demo Autofill Helper */}
+              {isLoginMode && (
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEmail('admin@cvstudio.cloud');
+                      setPassword('AdminSecret2026!');
+                      setError(null);
+                    }}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-amber-400 font-medium transition-colors bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer"
+                    title="Remplir automatiquement avec les identifiants administrateur de test"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Remplir avec le compte Administrateur</span>
+                  </button>
+                </div>
+              )}
             </form>
 
             {/* Mode Switcher Footer */}
