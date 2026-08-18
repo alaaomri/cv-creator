@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+/* PDF Export & Print Styles */
+.is-exporting-pdf button,
+.is-exporting-pdf .no-print,
+.is-exporting-pdf .cv-edit-action-btn,
+.is-exporting-pdf [data-no-print="true"],
+.is-exporting-pdf [data-export-ignore="true"],
+.is-exporting-pdf [aria-label*="Modifier"] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  pointer-events: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.is-exporting-pdf {
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  body {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .no-print,
+  .cv-edit-action-btn,
+  button,
+  [data-no-print="true"],
+  [data-export-ignore="true"],
+  [aria-label*="Modifier"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Prevent awkward pagination cuts when printing or exporting */
+  h1, h2, h3, h4,
+  p, li,
+  .space-y-4 > div,
+  .space-y-3 > div,
+  .space-y-2 > div,
+  .space-y-6 > div,
+  .grid > div,
+  section {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+}
+
+

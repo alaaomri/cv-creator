@@ -1,0 +1,80 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  username     String        @unique
+  passwordHash String
+  fullName     String
+  role         Role          @default(USER)
+  avatarUrl    String?
+  isActive     Boolean       @default(true)
+  disabledAt   DateTime?
+  disabledReason String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  cvs          CV[]
+  logs         ActivityLog[]
+
+  @@map("users")
+}
+
+model CV {
+  id           String    @id @default(uuid())
+  userId       String?
+  user         User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slug         String    @unique
+  title        String
+  isPublished  Boolean   @default(false)
+  publishedAt  DateTime?
+  viewCount    Int       @default(0)
+  lastViewedAt DateTime?
+  templateId   String    @default("modern-clean")
+  data         Json
+  createdBy    String?
+  createdByName String?
+  updatedBy    String?
+  updatedByName String?
+  version      Int       @default(1)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("cvs")
+}
+
+model ActivityLog {
+  id            String   @id @default(uuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  type          String
+  title         String
+  details       String
+  cvId          String?
+  candidateName String?
+  createdAt     DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+model ExportMetric {
+  id            String   @id @default(uuid())
+  type          String
+  cvId          String?
+  candidateName String?
+  createdAt     DateTime @default(now())
+
+  @@map("export_metrics")
+}

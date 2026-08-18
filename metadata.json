@@ -1,0 +1,6 @@
+{
+  "name": "CV Studio Pro",
+  "description": "Plateforme complète et moderne de création, personnalisation, export PDF, partage par email et publication web dédiée de CV avec gestion multi-versions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
