@@ -1,0 +1,21 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[functions]
+  node_bundler = "esbuild"
+  # Prisma ships native query engines; keep it external so Netlify includes it as-is.
+  external_node_modules = ["@prisma/client"]
+
+# API traffic is proxied to the Express app running as a serverless function.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# SPA fallback: every other route serves the built React app.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
