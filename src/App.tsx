@@ -72,7 +72,7 @@ export function App() {
   // Multi-version data state
   const [cvList, setCvList] = useState<CVListItem[]>([]);
   const [currentCv, setCurrentCv] = useState<CVData>(ensureValidCVData(DEFAULT_CV_DATA));
-  const [previewScale, setPreviewScale] = useState(0.85);
+  const [previewScale, setPreviewScale] = useState(1);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   
   // Save & Dirty state management (Opt-in Save button & Client Validation)
