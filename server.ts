@@ -3,7 +3,6 @@ import path from "path";
 import crypto from "crypto";
 import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
-import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import {
   seedInitialDatabase,
@@ -31,7 +30,7 @@ import { apiProxySecurityMiddleware } from "./server/security";
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Parsers & Middlewares
 app.use(express.json({ limit: "15mb" }));
@@ -1381,6 +1380,7 @@ app.post("/api/share/email", (req: Request, res: Response) => {
 // -------------------------------------------------------------
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
