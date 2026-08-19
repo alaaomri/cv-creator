@@ -34,6 +34,14 @@ export interface StoredCV {
   version: number;
   updatedAt: string;
   createdAt: string;
+  securityConfig?: {
+    isProtected?: boolean;
+    hasPassword?: boolean;
+    maskContactInfo?: boolean;
+    expiresAt?: string;
+    pinHint?: string;
+  };
+  passwordHash?: string;
 }
 
 export interface ActivityLogItem {
@@ -92,28 +100,83 @@ export function getPrisma(): any {
           },
         },
       });
-      prismaInstance.$connect()
-        .then(() => {
-          isPrismaConnected = true;
-          console.log("[PostgreSQL / Supabase] Prisma connected successfully.");
-        })
-        .catch((err: any) => {
-          console.warn("[PostgreSQL / Supabase] Could not connect, falling back to memory store:", err.message);
-          isPrismaConnected = false;
-        });
+      // Prisma connects lazily on the first query, so the client is usable
+      // immediately. We still trigger an eager connection for faster warm-up
+      // and clearer logs, but we never gate usage on it (that previously made
+      // every early request fall back to the in-memory store and lose data).
+      isPrismaConnected = true;
+      prismaInstance
+        .$connect()
+        .then(() => console.log("[PostgreSQL / Supabase] Prisma connected successfully."))
+        .catch((err: any) =>
+          console.warn("[PostgreSQL / Supabase] Prisma connect warning (queries still attempted):", err.message)
+        );
     } catch (e: any) {
-      console.warn("[Prisma] Init warning:", e.message);
+      console.warn("[Prisma] Init failed, using in-memory store:", e.message);
+      prismaInstance = null;
+      isPrismaConnected = false;
+      return null;
     }
   }
-  return isPrismaConnected ? prismaInstance : null;
+  return prismaInstance;
 }
 
 export function isDbConnected(): boolean {
   return isPrismaConnected;
 }
 
-// Seed initial admin user
+// Map a Prisma user row into the in-memory UserRecord shape
+function mapPrismaUser(user: any): UserRecord {
+  return {
+    id: user.id,
+    email: user.email,
+    username: user.username || user.email.split("@")[0],
+    passwordHash: user.passwordHash,
+    fullName: user.fullName,
+    role: user.role as "USER" | "ADMIN",
+    avatarUrl: user.avatarUrl || undefined,
+    isActive: user.isActive ?? true,
+    disabledAt: user.disabledAt ? new Date(user.disabledAt).toISOString() : undefined,
+    disabledReason: user.disabledReason || undefined,
+    createdAt: new Date(user.createdAt).toISOString(),
+    updatedAt: new Date(user.updatedAt).toISOString(),
+  };
+}
+
+// Load every persisted user from Postgres into the in-memory mirror so that
+// admin listings and role/status mutations survive rebuilds & redeploys.
+async function hydrateUsersFromDb(): Promise<boolean> {
+  const prisma = getPrisma();
+  if (!prisma) return false;
+  try {
+    const rows = await prisma.user.findMany();
+    for (const row of rows) {
+      const mapped = mapPrismaUser(row);
+      memoryUsers.set(mapped.id, mapped);
+    }
+    console.log(`[DB] Hydrated ${rows.length} user(s) from Postgres.`);
+    return true;
+  } catch (e: any) {
+    console.warn("[DB] User hydration failed (using in-memory store):", e.message);
+    return false;
+  }
+}
+
+// Seed the default admin account ONCE. This is idempotent: if an admin already
+// exists (in Postgres or memory) it is never overwritten, so shared-database
+// data is preserved across restarts instead of being re-initialized.
 export async function seedInitialDatabase() {
+  const dbAvailable = await hydrateUsersFromDb();
+
+  const adminAlreadyExists = Array.from(memoryUsers.values()).some(
+    (u) => u.email === "admin@cvstudio.cloud" || u.role === "ADMIN"
+  );
+
+  if (adminAlreadyExists) {
+    console.log("[Auth & DB] Admin account already present — skipping seed (data preserved).");
+    return;
+  }
+
   const adminSalt = await bcrypt.genSalt(10);
   const adminHash = await bcrypt.hash("AdminSecret2026!", adminSalt);
 
@@ -128,6 +191,27 @@ export async function seedInitialDatabase() {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  const prisma = getPrisma();
+  if (dbAvailable && prisma) {
+    try {
+      await prisma.user.upsert({
+        where: { email: adminUser.email },
+        update: {},
+        create: {
+          id: adminUser.id,
+          email: adminUser.email,
+          username: adminUser.username,
+          passwordHash: adminUser.passwordHash,
+          fullName: adminUser.fullName,
+          role: adminUser.role,
+          isActive: true,
+        },
+      });
+    } catch (e: any) {
+      console.warn("[DB] Admin persist failed (kept in memory):", e.message);
+    }
+  }
 
   memoryUsers.set(adminUser.id, adminUser);
   console.log("[Auth & DB] Initialized admin security account (admin@cvstudio.cloud)");

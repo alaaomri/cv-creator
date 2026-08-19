@@ -34,7 +34,9 @@ app.use(apiProxySecurityMiddleware);
 app.use(authMiddleware);
 
 // Initialize DB and Seed users
-seedInitialDatabase().catch(console.error);
+seedInitialDatabase()
+  .then(() => hydrateCVsFromDb())
+  .catch(console.error);
 
 // In-memory data store with disk/memory caching layer
 interface StoredCV {
@@ -113,6 +115,119 @@ function maskCandidateName(name: string): string {
 
 // Database store
 const cvDatabase = new Map<string, StoredCV>();
+
+// -------------------------------------------------------------
+// POSTGRES WRITE-THROUGH PERSISTENCE FOR CVs
+// -------------------------------------------------------------
+// The Prisma `CV` model has no columns for securityConfig/passwordHash, so we
+// stash them inside the JSON payload under a reserved `__meta` key and restore
+// them on hydration. This keeps CVs alive across rebuilds/redeploys without a
+// schema migration on the shared database.
+function serializeCVForDb(cv: StoredCV) {
+  const payload = {
+    ...(cv.data || {}),
+    __meta: {
+      securityConfig: cv.securityConfig || null,
+      passwordHash: cv.passwordHash || null,
+    },
+  };
+  return {
+    id: cv.id,
+    userId: cv.userId || null,
+    slug: cv.slug,
+    title: cv.title,
+    isPublished: !!cv.isPublished,
+    publishedAt: cv.publishedAt ? new Date(cv.publishedAt) : null,
+    viewCount: cv.viewCount ?? 0,
+    lastViewedAt: cv.lastViewedAt ? new Date(cv.lastViewedAt) : null,
+    templateId: cv.data?.templateId || "modern-clean",
+    data: payload,
+    createdBy: cv.createdBy || null,
+    createdByName: cv.createdByName || null,
+    updatedBy: cv.updatedBy || null,
+    updatedByName: cv.updatedByName || null,
+    version: cv.version ?? 1,
+  };
+}
+
+function deserializeCVFromDb(row: any): StoredCV {
+  const meta = (row.data && row.data.__meta) || {};
+  const data = { ...(row.data || {}) };
+  delete (data as any).__meta;
+  return {
+    id: row.id,
+    userId: row.userId || undefined,
+    slug: row.slug,
+    title: row.title,
+    isPublished: row.isPublished,
+    publishedAt: row.publishedAt ? new Date(row.publishedAt).toISOString() : undefined,
+    viewCount: row.viewCount ?? 0,
+    lastViewedAt: row.lastViewedAt ? new Date(row.lastViewedAt).toISOString() : undefined,
+    data,
+    createdBy: row.createdBy || undefined,
+    createdByName: row.createdByName || undefined,
+    updatedBy: row.updatedBy || undefined,
+    updatedByName: row.updatedByName || undefined,
+    version: row.version ?? 1,
+    createdAt: row.createdAt ? new Date(row.createdAt).toISOString() : new Date().toISOString(),
+    updatedAt: row.updatedAt ? new Date(row.updatedAt).toISOString() : new Date().toISOString(),
+    securityConfig: meta.securityConfig || undefined,
+    passwordHash: meta.passwordHash || undefined,
+  };
+}
+
+async function persistCVToDb(cv: StoredCV): Promise<void> {
+  const prisma = getPrisma();
+  if (!prisma) return;
+  try {
+    const record = serializeCVForDb(cv);
+    await prisma.cV.upsert({
+      where: { id: cv.id },
+      update: record,
+      create: record,
+    });
+  } catch (e: any) {
+    console.warn(`[DB] CV persist failed for ${cv.id} (kept in memory):`, e.message);
+  }
+}
+
+async function deleteCVFromDb(id: string): Promise<void> {
+  const prisma = getPrisma();
+  if (!prisma) return;
+  try {
+    await prisma.cV.delete({ where: { id } });
+  } catch (e: any) {
+    // Ignore "record not found" — memory deletion already happened.
+  }
+}
+
+// Write-through helpers: keep the in-memory store fast while persisting to
+// Postgres so data survives restarts. Fire-and-forget on the DB write.
+function saveCV(cv: StoredCV): void {
+  cvDatabase.set(cv.id, cv);
+  void persistCVToDb(cv);
+}
+
+function removeCV(id: string): void {
+  cvDatabase.delete(id);
+  void deleteCVFromDb(id);
+}
+
+// Load all persisted CVs into memory on boot.
+async function hydrateCVsFromDb(): Promise<void> {
+  const prisma = getPrisma();
+  if (!prisma) return;
+  try {
+    const rows = await prisma.cV.findMany();
+    for (const row of rows) {
+      const cv = deserializeCVFromDb(row);
+      cvDatabase.set(cv.id, cv);
+    }
+    console.log(`[DB] Hydrated ${rows.length} CV(s) from Postgres.`);
+  } catch (e: any) {
+    console.warn("[DB] CV hydration failed (using in-memory store):", e.message);
+  }
+}
 
 // Performance, exports & Prometheus telemetry metrics
 const metrics = {
@@ -698,7 +813,7 @@ app.get("/api/public/cv/:slug", (req: Request, res: Response) => {
   // 4. Open Public Access: Increment view counter & return full normalized CV
   found.viewCount = (found.viewCount || 0) + 1;
   found.lastViewedAt = new Date().toISOString();
-  cvDatabase.set(found.id, found);
+  saveCV(found);
 
   const cvData = toCVData(found);
   res.json({
@@ -794,7 +909,7 @@ app.post("/api/public/cv/:slug/unlock", (req: Request, res: Response) => {
   // Increment view counter
   found.viewCount = (found.viewCount || 0) + 1;
   found.lastViewedAt = new Date().toISOString();
-  cvDatabase.set(found.id, found);
+  saveCV(found);
 
   logActivity(
     'cv_viewed',
@@ -867,7 +982,7 @@ app.put("/api/cvs/:id", (req: Request, res: Response) => {
       createdAt: existing?.createdAt || now,
     };
 
-    cvDatabase.set(id, storedItem);
+    saveCV(storedItem);
     redisCache.set(`cv:id:${id}`, { value: normalizedData, expiresAt: Date.now() + 30000 });
     metrics.totalUpdates++;
 
@@ -961,7 +1076,7 @@ app.post("/api/cvs", (req: Request, res: Response) => {
       createdAt: existing?.createdAt || now,
     };
 
-    cvDatabase.set(finalId, storedItem);
+    saveCV(storedItem);
     redisCache.delete(`cv:id:${finalId}`);
     metrics.totalCreations++;
 
@@ -1042,7 +1157,7 @@ app.post("/api/cvs/:id/publish", (req: Request, res: Response) => {
   item.version = (item.version || 1) + 1;
   item.updatedAt = new Date().toISOString();
 
-  cvDatabase.set(id, item);
+  saveCV(item);
   redisCache.delete(`cv:id:${id}`);
 
   const normalized = toCVData(item);
@@ -1167,6 +1282,15 @@ app.put("/api/admin/users/:id/role", requireAdmin, async (req: Request, res: Res
   user.updatedAt = new Date().toISOString();
   memoryUsers.set(id, user);
 
+  const prismaRole = getPrisma();
+  if (prismaRole) {
+    try {
+      await prismaRole.user.update({ where: { id }, data: { role: user.role } });
+    } catch (e) {
+      // Memory store remains the source of truth on failure
+    }
+  }
+
   logActivity(
     "cv_updated" as any,
     "Privilèges Utilisateur Modifiés",
@@ -1209,6 +1333,22 @@ app.put("/api/admin/users/:id/status", requireAdmin, async (req: Request, res: R
   user.disabledReason = isActive ? undefined : (reason || "Désactivation administrative");
   user.updatedAt = new Date().toISOString();
   memoryUsers.set(id, user);
+
+  const prismaStatus = getPrisma();
+  if (prismaStatus) {
+    try {
+      await prismaStatus.user.update({
+        where: { id },
+        data: {
+          isActive: user.isActive,
+          disabledAt: user.disabledAt ? new Date(user.disabledAt) : null,
+          disabledReason: user.disabledReason || null,
+        },
+      });
+    } catch (e) {
+      // Memory store remains the source of truth on failure
+    }
+  }
 
   logActivity(
     "cv_updated" as any,
@@ -1336,7 +1476,7 @@ app.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Respo
   let removedCvs = 0;
   for (const [cvId, cv] of cvDatabase.entries()) {
     if (cv.userId === id) {
-      cvDatabase.delete(cvId);
+      removeCV(cvId);
       redisCache.delete(`cv:id:${cvId}`);
       redisCache.delete(`cv:slug:${cv.slug}`);
       removedCvs++;
@@ -1464,7 +1604,7 @@ app.post("/api/cvs/:id/duplicate", (req: Request, res: Response) => {
     data: duplicatedData,
   };
 
-  cvDatabase.set(newId, duplicated);
+  saveCV(duplicated);
 
   logActivity(
     'cv_created',
@@ -1495,7 +1635,7 @@ app.delete("/api/cvs/:id", requireAuth, (req: Request, res: Response) => {
     return res.status(403).json({ success: false, error: "Accès refusé : vous ne pouvez supprimer que vos propres CV." });
   }
 
-  cvDatabase.delete(id);
+  removeCV(id);
   redisCache.delete(`cv:id:${id}`);
   redisCache.delete(`cv:slug:${existing.slug}`);
   res.json({ success: true, message: "CV supprimé avec succès" });
