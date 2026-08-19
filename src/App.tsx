@@ -671,7 +671,7 @@ export function App() {
     <div className="min-h-screen bg-slate-100 flex flex-col text-slate-800 font-sans">
       {/* Main Navigation Header */}
       <header className="sticky top-0 z-40 bg-slate-900 text-white border-b border-slate-800 shadow-md">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="w-full px-3 sm:px-5 lg:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4">
           
           {/* Left: Brand Logo & Desktop Navigation */}
           <div className="flex items-center gap-4 lg:gap-6 min-w-0">
@@ -685,19 +685,16 @@ export function App() {
               </div>
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <span className="font-bold text-sm sm:text-base tracking-tight text-white group-hover:text-sky-300 transition-colors">
-                  CV Studio
-                </span>
-                <span className="text-[9px] sm:text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/30">
-                  Cloud
+                  CV Creator
                 </span>
               </div>
             </button>
 
             {/* Desktop Primary Navigation Tabs */}
-            <nav className="hidden md:flex items-center gap-1.5">
+            <nav className="hidden xl:flex items-center gap-1.5">
               <button
                 onClick={() => navigateWithUnsavedCheck(() => setCurrentView('home'))}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   currentView === 'home'
                     ? 'bg-slate-800 text-sky-400 font-bold'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -709,7 +706,7 @@ export function App() {
 
               <button
                 onClick={() => setCurrentView('editor')}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                   currentView === 'editor'
                     ? 'bg-sky-600 text-white shadow-sm'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -721,7 +718,7 @@ export function App() {
 
               <button
                 onClick={() => navigateWithUnsavedCheck(() => setCurrentView('dashboard'))}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                   currentView === 'dashboard'
                     ? 'bg-slate-800 text-sky-400 font-bold'
                     : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
@@ -743,7 +740,7 @@ export function App() {
                     setActiveEditorTab('theme');
                     if (mobileTab === 'preview') setMobileTab('form');
                   }}
-                  className={`hidden sm:flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer ring-1 ring-white/20 ${
+                  className={`hidden sm:flex items-center gap-1.5 sm:gap-2 h-9 px-3 rounded-xl text-xs font-bold whitespace-nowrap shadow-xs transition-all cursor-pointer ring-1 ring-white/20 ${
                     activeEditorTab === 'theme'
                       ? 'bg-indigo-600 text-white ring-indigo-400'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
@@ -751,7 +748,7 @@ export function App() {
                   title="Changer de modèle, couleurs et polices"
                 >
                   <Palette className="w-4 h-4 text-indigo-300" />
-                  <span className="hidden md:inline">Modèle & Style</span>
+                  <span className="hidden xl:inline">Modèle & Style</span>
                   <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-white/20 text-white truncate max-w-[90px] md:max-w-[110px]">
                     {TEMPLATES_META.find(t => t.id === currentCv.templateId)?.name || 'Modèle'}
                   </span>
@@ -762,7 +759,7 @@ export function App() {
                   type="button"
                   onClick={() => handleSave()}
                   disabled={isSaving}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs disabled:opacity-50 min-h-[38px] ${
+                  className={`flex items-center gap-1.5 h-9 px-2.5 sm:px-3.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer shadow-xs disabled:opacity-50 ${
                     hasUnsavedChanges
                       ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-400/60 shadow-md animate-pulse-subtle'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -791,7 +788,7 @@ export function App() {
                 {/* 3. Email Share button (Desktop only) */}
                 <button
                   onClick={() => setIsShareEmailOpen(true)}
-                  className="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px]"
+                  className="hidden xl:flex items-center gap-1.5 h-9 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer"
                   title="Partager votre CV directement par email"
                 >
                   <Mail className="w-3.5 h-3.5 text-sky-400" />
@@ -801,7 +798,7 @@ export function App() {
                 {/* 4. Share / Publish button */}
                 <button
                   onClick={() => setIsPublishModalOpen(true)}
-                  className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer min-h-[38px] ${
+                  className={`hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     currentCv.isPublished
                       ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-500/30'
                       : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
@@ -809,7 +806,7 @@ export function App() {
                   title={!isAuthenticated ? "Mode anonyme : Se connecter pour garder le CV et déployer le CV" : "Partager et publier sur le web"}
                 >
                   {!isAuthenticated ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Globe className="w-3.5 h-3.5 text-emerald-400" />}
-                  <span className="hidden md:inline">
+                  <span className="hidden xl:inline">
                     {currentCv.isPublished ? 'En Ligne' : 'Publier'}
                   </span>
                 </button>
@@ -818,7 +815,7 @@ export function App() {
                 <button
                   onClick={handleExportPDF}
                   disabled={isExportingPDF}
-                  className="flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer disabled:opacity-50 min-h-[38px]"
+                  className="flex items-center gap-1.5 h-9 px-2.5 sm:px-4 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-md whitespace-nowrap transition-all cursor-pointer disabled:opacity-50"
                   title="Télécharger votre CV en PDF haute résolution"
                 >
                   <Download className="w-4 h-4" />
@@ -829,10 +826,10 @@ export function App() {
 
             {/* Desktop User Profile / Auth Button */}
             {isAuthenticated && user ? (
-              <div className="relative hidden md:block">
+              <div className="relative hidden xl:block">
                 <button
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center gap-2 pl-2 pr-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs text-slate-200 transition-all cursor-pointer min-h-[38px]"
+                  className="flex items-center gap-2 h-9 pl-2 pr-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-xl text-xs text-slate-200 whitespace-nowrap transition-all cursor-pointer"
                 >
                   <div className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-[11px] ${user.role === 'ADMIN' ? 'bg-rose-500/30 text-rose-300' : 'bg-sky-500/30 text-sky-300'}`}>
                     {user.fullName.charAt(0).toUpperCase()}
@@ -897,7 +894,7 @@ export function App() {
                 onClick={() => {
                   openAuthModal('login');
                 }}
-                className="hidden md:flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer min-h-[38px]"
+                className="hidden xl:flex items-center gap-1.5 h-9 px-3.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-xs whitespace-nowrap transition-all cursor-pointer"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Connexion</span>
@@ -908,7 +905,7 @@ export function App() {
             <button
               type="button"
               onClick={() => setIsMobileDrawerOpen(true)}
-              className="md:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer"
+              className="xl:hidden p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors flex items-center justify-center min-h-[44px] min-w-[44px] cursor-pointer"
               title="Menu de navigation"
               aria-label="Menu"
             >
@@ -919,7 +916,7 @@ export function App() {
       </header>
 
       {/* Mobile Tab Switcher */}
-      <div className="md:hidden bg-slate-900 text-white border-b border-slate-800 px-2 py-1.5 flex items-center justify-around text-xs font-bold gap-1">
+      <div className="xl:hidden bg-slate-900 text-white border-b border-slate-800 px-2 py-1.5 flex items-center justify-around text-xs font-bold gap-1">
         <button
           onClick={() => navigateWithUnsavedCheck(() => setCurrentView('home'))}
           className={`flex-1 py-2 px-2 rounded-xl flex items-center justify-center gap-1.5 transition-colors min-h-[40px] ${
@@ -987,12 +984,48 @@ export function App() {
       )}
 
       {currentView === 'editor' && (
-        <div className="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 flex flex-col lg:flex-row gap-6">
-          {/* LEFT COLUMN: Clean 2-Tier Editor (Contenu vs Modèles) */}
-          <div className="w-full lg:w-[48%] xl:w-[46%] flex flex-col space-y-4">
-            
-            {/* 1. Document Title & Save status bar */}
-            <div className="bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between gap-3">
+        <div className="flex-1 flex min-h-0 overflow-hidden bg-slate-200/50">
+          {/* LATERAL RAIL — Canva-style vertical section menu (desktop) */}
+          <aside className="hidden lg:flex flex-col items-center w-[78px] bg-slate-900 border-r border-slate-800 py-3 gap-1 shrink-0 overflow-y-auto">
+            {[
+              { id: 'info', label: 'Profil', icon: User },
+              { id: 'experiences', label: 'Parcours', icon: Briefcase },
+              { id: 'education', label: 'Formation', icon: GraduationCap },
+              { id: 'skills', label: 'Skills', icon: Cpu },
+              { id: 'projects', label: 'Projets', icon: FolderGit2 },
+              { id: 'languages', label: 'Langues', icon: Award },
+            ].map((s) => {
+              const Icon = s.icon;
+              const active = activeEditorTab === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => { setActiveEditorTab(s.id as any); if (mobileTab === 'preview') setMobileTab('form'); }}
+                  className={`w-14 flex flex-col items-center gap-1 py-2.5 rounded-xl text-[10px] font-semibold transition-all cursor-pointer ${active ? 'bg-sky-600 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-slate-800'}`}
+                  title={s.label}
+                >
+                  <Icon className="w-5 h-5" />
+                  <span className="leading-none">{s.label}</span>
+                </button>
+              );
+            })}
+            <div className="my-1.5 h-px w-8 bg-slate-700/70 shrink-0" />
+            <button
+              type="button"
+              onClick={() => { setActiveEditorTab('theme'); if (mobileTab === 'preview') setMobileTab('form'); }}
+              className={`w-14 flex flex-col items-center gap-1 py-2.5 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${activeEditorTab === 'theme' ? 'bg-linear-to-b from-indigo-600 to-purple-600 text-white shadow-sm ring-1 ring-indigo-400' : 'text-indigo-300 hover:text-white hover:bg-slate-800'}`}
+              title="Apparence & Design"
+            >
+              <Palette className="w-5 h-5" />
+              <span className="leading-none">Design</span>
+            </button>
+          </aside>
+
+          {/* EDITOR PANEL */}
+          <section className={`flex-col bg-white border-r border-slate-200 w-full lg:w-[400px] xl:w-[440px] shrink-0 min-h-0 ${mobileTab === 'preview' ? 'hidden lg:flex' : 'flex'}`}>
+            {/* Panel header: document title & save */}
+            <div className="shrink-0 bg-white px-4 py-2.5 border-b border-slate-200 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Edit3 className={`w-4 h-4 shrink-0 transition-colors ${!currentCv.title?.trim() ? 'text-amber-500' : 'text-slate-400'}`} />
                 <div className="relative flex-1 min-w-0 flex items-center">
@@ -1054,6 +1087,38 @@ export function App() {
                 </button>
               </div>
             </div>
+
+            {/* Mobile section selector (chips) */}
+            <div className="lg:hidden shrink-0 border-b border-slate-200 bg-white px-2 py-2 overflow-x-auto">
+              <div className="flex items-center gap-1.5 w-max">
+                {[
+                  { id: 'info', label: 'Profil', icon: User },
+                  { id: 'experiences', label: 'Parcours', icon: Briefcase },
+                  { id: 'education', label: 'Formation', icon: GraduationCap },
+                  { id: 'skills', label: 'Skills', icon: Cpu },
+                  { id: 'projects', label: 'Projets', icon: FolderGit2 },
+                  { id: 'languages', label: 'Langues', icon: Award },
+                  { id: 'theme', label: 'Design', icon: Palette },
+                ].map((s) => {
+                  const Icon = s.icon;
+                  const active = activeEditorTab === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => { setActiveEditorTab(s.id as any); setMobileTab('form'); }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${active ? (s.id === 'theme' ? 'bg-indigo-600 text-white' : 'bg-sky-600 text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                    >
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{s.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Scrollable panel body */}
+            <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
 
             {/* Front-end Validation Errors Alert Banner */}
             {validationErrors.length > 0 && (
@@ -1118,97 +1183,10 @@ export function App() {
               </div>
             )}
 
-            {/* Mobile Switcher (Only on phone/small tablet) */}
-            <div className="flex lg:hidden bg-white p-1 rounded-xl border border-slate-200 shadow-2xs">
-              <button
-                onClick={() => setMobileTab('form')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  mobileTab === 'form' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                📝 Modifier le CV
-              </button>
-              <button
-                onClick={() => setMobileTab('preview')}
-                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                  mobileTab === 'preview' ? 'bg-sky-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                👁️ Voir l'Aperçu
-              </button>
-            </div>
-
+            {/* Mobile Switcher removed — replaced by lateral rail (desktop) + section chips (mobile) + floating toggle */}
             {/* Dual Navigation: 1. Contenu du CV (Sections) & 2. Apparence & Modèle (Isolé & Mis en valeur) */}
-            <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
-              {/* 1. Contenu & Rédaction (6 Sections) */}
-              <div className="flex-1 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-2xs">
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1">
-                  {[
-                    { id: 'info', label: 'Profil', icon: User },
-                    { id: 'experiences', label: 'Expériences', icon: Briefcase },
-                    { id: 'education', label: 'Formation', icon: GraduationCap },
-                    { id: 'skills', label: 'Compétences', icon: Cpu },
-                    { id: 'projects', label: 'Projets', icon: FolderGit2 },
-                    { id: 'languages', label: 'Langues', icon: Award },
-                  ].map((tab) => {
-                    const Icon = tab.icon;
-                    const active = activeEditorTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => {
-                          setActiveEditorTab(tab.id as any);
-                          if (mobileTab === 'preview') setMobileTab('form');
-                        }}
-                        className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2 px-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? 'bg-sky-600 text-white shadow-xs'
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60'
-                        }`}
-                      >
-                        <Icon className="w-3.5 h-3.5 shrink-0" />
-                        <span className="truncate">{tab.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 2. Apparence & Modèle (Totalement Isolé & Mis en valeur) */}
-              <div className="shrink-0 bg-white p-1.5 rounded-2xl border border-indigo-200/80 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveEditorTab('theme');
-                    if (mobileTab === 'preview') setMobileTab('form');
-                  }}
-                  className={`w-full md:w-auto flex items-center justify-between md:justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    activeEditorTab === 'theme'
-                      ? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-xs ring-2 ring-indigo-300'
-                      : 'bg-indigo-50/90 hover:bg-indigo-100 text-indigo-900 border border-indigo-200'
-                  }`}
-                  title="Modifier le modèle (6 formats ATS), les couleurs, polices et marges"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <Palette className={`w-4 h-4 shrink-0 ${activeEditorTab === 'theme' ? 'text-indigo-200' : 'text-indigo-600'}`} />
-                    <span>Apparence & Design</span>
-                  </div>
-                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono truncate max-w-[100px] ${
-                    activeEditorTab === 'theme'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-indigo-600/10 text-indigo-700 border border-indigo-300/40'
-                  }`}>
-                    {TEMPLATES_META.find(t => t.id === currentCv.templateId)?.name || 'Modèle'}
-                  </span>
-                </button>
-              </div>
-            </div>
-
-            {/* 4. Active Form Card */}
-            <div className={`bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-xs flex-1 ${
-              mobileTab === 'preview' ? 'hidden lg:block' : 'block'
-            }`}>
+            {/* Active section form */}
+            <div className="pb-1">
               {activeEditorTab === 'info' && (
                 <PersonalInfoForm
                   personalInfo={currentCv.personalInfo}
@@ -1271,14 +1249,15 @@ export function App() {
                 />
               )}
             </div>
-          </div>
+            </div>
+          </section>
 
-          {/* RIGHT COLUMN: Clean Live CV Preview */}
-          <div className={`w-full lg:w-[52%] xl:w-[54%] flex flex-col items-center space-y-3 ${
+          {/* CANVAS — full-bleed live preview */}
+          <main className={`flex-1 flex-col min-h-0 bg-slate-200/50 ${
             mobileTab === 'form' ? 'hidden lg:flex' : 'flex'
           }`}>
-            {/* Simple Preview Toolbar */}
-            <div className="w-full max-w-[820px] bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-2xs flex items-center justify-between text-xs">
+            {/* Canvas toolbar */}
+            <div className="shrink-0 bg-white/95 backdrop-blur px-3 sm:px-4 py-2 border-b border-slate-200 flex items-center justify-between text-xs">
               
               {/* Left: Indicator */}
               <div className="flex items-center gap-2">
@@ -1329,8 +1308,8 @@ export function App() {
               </div>
             </div>
 
-            {/* CV Canvas */}
-            <div className="w-full flex justify-center overflow-x-auto pb-8">
+            {/* CV Canvas scroll area */}
+            <div className="flex-1 min-h-0 overflow-auto p-4 sm:p-6 lg:p-8 flex justify-center items-start">
               <CVPreviewRenderer
                 data={currentCv}
                 scale={previewScale}
@@ -1340,7 +1319,7 @@ export function App() {
                 }}
               />
             </div>
-          </div>
+          </main>
 
           {/* Floating Mobile Toggle Button (Only on mobile/small screens in editor) */}
           <div className="lg:hidden fixed bottom-5 right-5 z-30">
@@ -1366,6 +1345,7 @@ export function App() {
       )}
 
       {/* Discreet Footer with Admin Console Access */}
+      {currentView !== 'editor' && (
       <footer className="mt-auto py-4 px-4 bg-slate-900 border-t border-slate-800 text-xs text-slate-400">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -1389,6 +1369,7 @@ export function App() {
           </div>
         </div>
       </footer>
+      )}
 
       {/* MOBILE NAVIGATION DRAWER */}
       <MobileNavDrawer

@@ -107,6 +107,27 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false);
   const [statusActionError, setStatusActionError] = useState<string | null>(null);
 
+  // User deletion state
+  const [userToDelete, setUserToDelete] = useState<AuthUser | null>(null);
+  const [isDeletingUser, setIsDeletingUser] = useState<boolean>(false);
+  const [deleteUserError, setDeleteUserError] = useState<string | null>(null);
+
+  // User edit modal state
+  const [userToEdit, setUserToEdit] = useState<AuthUser | null>(null);
+  const [editForm, setEditForm] = useState<{ fullName: string; email: string; username: string; role: UserRole }>({
+    fullName: '',
+    email: '',
+    username: '',
+    role: 'USER',
+  });
+  const [isSavingUser, setIsSavingUser] = useState<boolean>(false);
+  const [editUserError, setEditUserError] = useState<string | null>(null);
+
+  // CV deletion state (Data Explorer)
+  const [cvToDelete, setCvToDelete] = useState<AdminCVItem | null>(null);
+  const [isDeletingCv, setIsDeletingCv] = useState<boolean>(false);
+  const [deleteCvError, setDeleteCvError] = useState<string | null>(null);
+
   // Fetch admin data
   const fetchAdminData = async () => {
     try {
@@ -214,6 +235,99 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
       setStatusActionError(e.message || 'Erreur réseau');
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  // Open the edit-user modal pre-filled with the selected account
+  const handleOpenEditUser = (u: AuthUser) => {
+    setEditUserError(null);
+    setUserToEdit(u);
+    setEditForm({
+      fullName: u.fullName || '',
+      email: u.email || '',
+      username: u.username || '',
+      role: u.role,
+    });
+  };
+
+  const handleSaveUserEdit = async () => {
+    if (!userToEdit) return;
+    setIsSavingUser(true);
+    setEditUserError(null);
+    try {
+      const res = await authFetch(`/api/admin/users/${userToEdit.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fullName: editForm.fullName.trim(),
+          email: editForm.email.trim().toLowerCase(),
+          username: editForm.username.trim().toLowerCase(),
+          role: editForm.role,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUserToEdit(null);
+        fetchAdminData();
+      } else {
+        setEditUserError(data.error || "Erreur lors de la mise à jour de l'utilisateur.");
+      }
+    } catch (e: any) {
+      setEditUserError(e.message || 'Erreur réseau');
+    } finally {
+      setIsSavingUser(false);
+    }
+  };
+
+  // Delete a user account (with owned CVs cascade on the server)
+  const handleDeleteUser = (u: AuthUser) => {
+    setDeleteUserError(null);
+    setUserToDelete(u);
+  };
+
+  const handleConfirmDeleteUser = async () => {
+    if (!userToDelete) return;
+    setIsDeletingUser(true);
+    setDeleteUserError(null);
+    try {
+      const res = await authFetch(`/api/admin/users/${userToDelete.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setUserToDelete(null);
+        fetchAdminData();
+      } else {
+        setDeleteUserError(data.error || "Erreur lors de la suppression du compte.");
+      }
+    } catch (e: any) {
+      setDeleteUserError(e.message || 'Erreur réseau');
+    } finally {
+      setIsDeletingUser(false);
+    }
+  };
+
+  // Delete a CV from the Data Explorer
+  const handleDeleteCv = (cv: AdminCVItem) => {
+    setDeleteCvError(null);
+    setCvToDelete(cv);
+  };
+
+  const handleConfirmDeleteCv = async () => {
+    if (!cvToDelete) return;
+    setIsDeletingCv(true);
+    setDeleteCvError(null);
+    try {
+      const res = await authFetch(`/api/cvs/${cvToDelete.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCvToDelete(null);
+        fetchAdminData();
+      } else {
+        setDeleteCvError(data.error || "Erreur lors de la suppression du CV.");
+      }
+    } catch (e: any) {
+      setDeleteCvError(e.message || 'Erreur réseau');
+    } finally {
+      setIsDeletingCv(false);
     }
   };
 
@@ -998,6 +1112,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
                                 {cv.isPublished ? 'Dépublier' : 'Publier'}
                               </button>
 
+                              {/* Delete CV */}
+                              <button
+                                onClick={() => handleDeleteCv(cv)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                                title="Supprimer définitivement ce CV"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+
                             </div>
                           </td>
 
@@ -1158,6 +1281,25 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
                                 title={isCurrentUser ? "Vous ne pouvez pas désactiver votre propre compte" : isActive ? "Suspendre ce compte" : "Réactiver ce compte"}
                               >
                                 {isActive ? 'Désactiver' : 'Réactiver'}
+                              </button>
+
+                              {/* Edit user */}
+                              <button
+                                onClick={() => handleOpenEditUser(u)}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer"
+                                title="Modifier le profil de cet utilisateur"
+                              >
+                                <FileCode className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Delete user */}
+                              <button
+                                onClick={() => handleDeleteUser(u)}
+                                disabled={isCurrentUser}
+                                className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white border border-slate-700 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                                title={isCurrentUser ? "Vous ne pouvez pas supprimer votre propre compte" : "Supprimer définitivement ce compte"}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </td>
@@ -1411,6 +1553,173 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({ onBackToStudio }) => {
         cancelLabel="Annuler"
         variant={userToToggleStatus?.currentStatus ? "danger" : "success"}
       />
+
+      {/* Confirmation Modal for user deletion */}
+      <ConfirmationModal
+        isOpen={Boolean(userToDelete)}
+        onClose={() => {
+          if (!isDeletingUser) {
+            setUserToDelete(null);
+            setDeleteUserError(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteUser}
+        isLoading={isDeletingUser}
+        title="Supprimer définitivement ce compte ?"
+        description={
+          userToDelete ? (
+            <div className="space-y-2">
+              <p>
+                Voulez-vous supprimer définitivement le compte de <strong className="text-slate-900 dark:text-white font-bold">{userToDelete.fullName}</strong> (@{userToDelete.username}) ? Tous les CV associés seront également supprimés. Cette action est irréversible.
+              </p>
+              {deleteUserError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-300 text-xs">
+                  {deleteUserError}
+                </div>
+              )}
+            </div>
+          ) : ''
+        }
+        confirmLabel="Supprimer le compte"
+        cancelLabel="Annuler"
+        variant="danger"
+      />
+
+      {/* Confirmation Modal for CV deletion */}
+      <ConfirmationModal
+        isOpen={Boolean(cvToDelete)}
+        onClose={() => {
+          if (!isDeletingCv) {
+            setCvToDelete(null);
+            setDeleteCvError(null);
+          }
+        }}
+        onConfirm={handleConfirmDeleteCv}
+        isLoading={isDeletingCv}
+        title="Supprimer définitivement ce CV ?"
+        description={
+          cvToDelete ? (
+            <div className="space-y-2">
+              <p>
+                Voulez-vous supprimer définitivement le CV <strong className="text-slate-900 dark:text-white font-bold">« {cvToDelete.title} »</strong> de {cvToDelete.candidateName} ? Cette action est irréversible.
+              </p>
+              {deleteCvError && (
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/50 text-rose-700 dark:text-rose-300 text-xs">
+                  {deleteCvError}
+                </div>
+              )}
+            </div>
+          ) : ''
+        }
+        confirmLabel="Supprimer le CV"
+        cancelLabel="Annuler"
+        variant="danger"
+      />
+
+      {/* Edit User Modal */}
+      {userToEdit && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full shadow-2xl overflow-hidden text-slate-100">
+            <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/60">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/15 text-indigo-400 border border-indigo-500/30">
+                  <FileCode className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">Modifier l'utilisateur</h3>
+                  <p className="text-[11px] text-slate-400 font-mono">ID: {userToEdit.id.slice(0, 16)}...</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => { if (!isSavingUser) { setUserToEdit(null); setEditUserError(null); } }}
+                className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleSaveUserEdit(); }}
+              className="p-5 space-y-4"
+            >
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Nom complet</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.fullName}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, fullName: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Identifiant unique (username)</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.username}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Adresse email</label>
+                <input
+                  type="email"
+                  required
+                  value={editForm.email}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 font-mono focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1.5">Rôle RBAC</label>
+                <select
+                  value={editForm.role}
+                  disabled={user?.id === userToEdit.id}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, role: e.target.value as UserRole }))}
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  <option value="USER">USER</option>
+                  <option value="ADMIN">ADMIN</option>
+                </select>
+                {user?.id === userToEdit.id && (
+                  <p className="text-[11px] text-slate-500 mt-1">Vous ne pouvez pas modifier votre propre rôle.</p>
+                )}
+              </div>
+
+              {editUserError && (
+                <div className="p-2.5 rounded-xl bg-rose-950/40 border border-rose-800/50 text-rose-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{editUserError}</span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => { if (!isSavingUser) { setUserToEdit(null); setEditUserError(null); } }}
+                  className="px-4 py-2 rounded-xl text-sm font-semibold text-slate-300 hover:bg-slate-800 border border-slate-700 transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingUser}
+                  className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSavingUser ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  <span>Enregistrer</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );

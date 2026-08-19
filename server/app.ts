@@ -1225,6 +1225,151 @@ app.put("/api/admin/users/:id/status", requireAdmin, async (req: Request, res: R
   });
 });
 
+// Admin Edit User Profile (fullName, email, username, role) - Protected with requireAdmin
+app.put("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { fullName, email, username, role } = req.body;
+
+  const user = memoryUsers.get(id);
+  if (!user) {
+    return res.status(404).json({ success: false, error: "Utilisateur introuvable." });
+  }
+
+  // Validate & apply email change with uniqueness check
+  if (typeof email === "string" && email.trim() && email.trim().toLowerCase() !== user.email) {
+    const cleanEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return res.status(400).json({ success: false, error: "Adresse email invalide." });
+    }
+    const existingEmail = await findUserByEmail(cleanEmail);
+    if (existingEmail && existingEmail.id !== id) {
+      return res.status(409).json({ success: false, error: "Cette adresse email est déjà utilisée par un autre compte." });
+    }
+    user.email = cleanEmail;
+  }
+
+  // Validate & apply username change with uniqueness check
+  if (typeof username === "string" && username.trim() && username.trim().toLowerCase() !== user.username) {
+    const cleanUsername = username.trim().toLowerCase();
+    if (!isValidUsernameFormat(cleanUsername)) {
+      return res.status(400).json({
+        success: false,
+        error: "Identifiant invalide (3-30 caractères : lettres minuscules, chiffres, tirets ou underscores).",
+      });
+    }
+    const existingUsername = await findUserByUsername(cleanUsername);
+    if (existingUsername && existingUsername.id !== id) {
+      return res.status(409).json({ success: false, error: "Cet identifiant unique est déjà réservé par un autre compte." });
+    }
+    user.username = cleanUsername;
+  }
+
+  if (typeof fullName === "string" && fullName.trim()) {
+    user.fullName = fullName.trim();
+  }
+
+  // Role change (guard against self-demotion of the acting admin)
+  if (role === "USER" || role === "ADMIN") {
+    if (req.user?.id === id && role !== "ADMIN") {
+      return res.status(400).json({
+        success: false,
+        error: "Action impossible : Vous ne pouvez pas retirer vos propres privilèges d'administrateur en cours de session.",
+      });
+    }
+    user.role = role;
+  }
+
+  user.updatedAt = new Date().toISOString();
+  memoryUsers.set(id, user);
+
+  // Best-effort persistence to the relational database when connected
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      await prisma.user.update({
+        where: { id },
+        data: {
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+          role: user.role,
+        },
+      });
+    } catch (e) {
+      // Memory store remains the source of truth on failure
+    }
+  }
+
+  logActivity(
+    "cv_updated" as any,
+    "Profil Utilisateur Modifié",
+    `Le profil de ${user.fullName} (@${user.username}) a été mis à jour par ${req.user?.fullName}`,
+    undefined,
+    user.fullName
+  );
+
+  res.json({
+    success: true,
+    message: `Le profil de ${user.fullName} a été mis à jour avec succès.`,
+    user: sanitizeUser(user),
+  });
+});
+
+// Admin Delete User Account - Protected with requireAdmin
+app.delete("/api/admin/users/:id", requireAdmin, async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  // Prevent admin from deleting their own account
+  if (req.user?.id === id) {
+    return res.status(400).json({
+      success: false,
+      error: "Action impossible : Vous ne pouvez pas supprimer votre propre compte administrateur.",
+    });
+  }
+
+  const user = memoryUsers.get(id);
+  if (!user) {
+    return res.status(404).json({ success: false, error: "Utilisateur introuvable." });
+  }
+
+  // Cascade: remove all CVs owned by this user and invalidate their caches
+  let removedCvs = 0;
+  for (const [cvId, cv] of cvDatabase.entries()) {
+    if (cv.userId === id) {
+      cvDatabase.delete(cvId);
+      redisCache.delete(`cv:id:${cvId}`);
+      redisCache.delete(`cv:slug:${cv.slug}`);
+      removedCvs++;
+    }
+  }
+
+  memoryUsers.delete(id);
+
+  const prisma = getPrisma();
+  if (prisma) {
+    try {
+      await prisma.user.delete({ where: { id } });
+    } catch (e) {
+      // Memory store already updated
+    }
+  }
+
+  logActivity(
+    "cv_updated" as any,
+    "Compte Utilisateur Supprimé",
+    `Le compte de ${user.fullName} (@${user.username}) et ${removedCvs} CV(s) associé(s) ont été supprimés par ${req.user?.fullName}`,
+    undefined,
+    user.fullName
+  );
+
+  res.json({
+    success: true,
+    message: `Le compte de ${user.fullName} (@${user.username}) a été supprimé définitivement (${removedCvs} CV(s) associé(s) retiré(s)).`,
+    removedCvs,
+  });
+});
+
+
 // Admin Raw Data Explorer API with full audit info (Protected with requireAdmin)
 app.get("/api/admin/cvs", requireAdmin, (req: Request, res: Response) => {
   const allCvs = Array.from(cvDatabase.values()).map(c => ({
@@ -1337,14 +1482,22 @@ app.post("/api/cvs/:id/duplicate", (req: Request, res: Response) => {
 });
 
 // Delete CV
-app.delete("/api/cvs/:id", (req: Request, res: Response) => {
+app.delete("/api/cvs/:id", requireAuth, (req: Request, res: Response) => {
   const { id } = req.params;
-  if (!cvDatabase.has(id)) {
+  const existing = cvDatabase.get(id);
+  if (!existing) {
     return res.status(404).json({ success: false, error: "CV non trouvé" });
+  }
+
+  // Only the owner or an administrator may delete a CV
+  const isOwner = !existing.userId || existing.userId === req.user?.id;
+  if (req.user?.role !== "ADMIN" && !isOwner) {
+    return res.status(403).json({ success: false, error: "Accès refusé : vous ne pouvez supprimer que vos propres CV." });
   }
 
   cvDatabase.delete(id);
   redisCache.delete(`cv:id:${id}`);
+  redisCache.delete(`cv:slug:${existing.slug}`);
   res.json({ success: true, message: "CV supprimé avec succès" });
 });
 
