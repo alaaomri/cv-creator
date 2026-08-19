@@ -165,15 +165,18 @@ export function App() {
       // If user is AUTHENTICATED: Sync cloud CVs
       try {
         // If there was a guest draft in localStorage from before logging in, import/sync it to Cloud
+        let syncedCvId: string | null = null;
         const storedGuest = localStorage.getItem('cv_studio_guest_draft');
         if (storedGuest) {
           try {
             const guestData = ensureValidCVData(JSON.parse(storedGuest));
-            await authFetch('/api/cvs', {
+            const syncRes = await authFetch('/api/cvs', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(guestData),
             });
+            const syncJson = await syncRes.json();
+            syncedCvId = syncJson?.item?.id || syncJson?.id || syncJson?.data?.id || null;
             localStorage.removeItem('cv_studio_guest_draft');
           } catch (syncErr) {
             console.warn('Failed to sync guest draft to cloud on login:', syncErr);
@@ -185,8 +188,11 @@ export function App() {
         const items = json.items || json.data;
         if (json.success && Array.isArray(items) && items.length > 0) {
           setCvList(items);
-          // Load full first CV
-          const firstCvRes = await authFetch(`/api/cvs/${items[0].id}`);
+          // Resume on the just-synced guest draft if available, otherwise load the first CV
+          const targetId = (syncedCvId && items.some((it: CVListItem) => it.id === syncedCvId))
+            ? syncedCvId
+            : items[0].id;
+          const firstCvRes = await authFetch(`/api/cvs/${targetId}`);
           const firstCvJson = await firstCvRes.json();
           if (firstCvJson.success && firstCvJson.data) {
             setCurrentCv(ensureValidCVData(firstCvJson.data));
@@ -330,6 +336,21 @@ export function App() {
       }
       return next;
     });
+  };
+
+  // Open the auth modal while preserving the current anonymous editing progress.
+  // Guest edits are snapshotted to localStorage so the sync-on-login effect uploads them to the account.
+  const openAuthModal = (mode: 'login' | 'register' = 'login') => {
+    if (!isAuthenticated) {
+      try {
+        const snapshot = ensureValidCVData(currentCv);
+        localStorage.setItem('cv_studio_guest_draft', JSON.stringify(snapshot));
+      } catch (e) {
+        console.warn('Could not snapshot guest draft before authentication:', e);
+      }
+    }
+    setAuthModalMode(mode);
+    setIsAuthModalOpen(true);
   };
 
   // Navigation guard for unsaved changes
@@ -591,8 +612,7 @@ export function App() {
     if (!isAuthenticated) {
       // In Guest Mode: zero backend call, open auth modal to invite user to register/login
       setIsPublishModalOpen(false);
-      setAuthModalMode('register');
-      setIsAuthModalOpen(true);
+      openAuthModal('register');
       return;
     }
 
@@ -875,8 +895,7 @@ export function App() {
             ) : (
               <button
                 onClick={() => {
-                  setAuthModalMode('login');
-                  setIsAuthModalOpen(true);
+                  openAuthModal('login');
                 }}
                 className="hidden md:flex items-center gap-1.5 px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer min-h-[38px]"
               >
@@ -938,8 +957,7 @@ export function App() {
           onOpenDevOps={() => navigateWithUnsavedCheck(() => setCurrentView('devops'))}
           onOpenAdmin={() => navigateWithUnsavedCheck(() => setIsAdminMode(true))}
           onOpenAuth={(mode) => {
-            setAuthModalMode(mode);
-            setIsAuthModalOpen(true);
+            openAuthModal(mode);
           }}
           onSelectTemplate={(templateId) => {
             handleSelectTemplate(templateId);
@@ -954,8 +972,7 @@ export function App() {
           currentCvId={currentCv.id}
           isAuthenticated={isAuthenticated}
           onOpenAuth={(mode) => {
-            setAuthModalMode(mode || 'login');
-            setIsAuthModalOpen(true);
+            openAuthModal(mode || 'login');
           }}
           onSelectCV={handleSelectCV}
           onCreateNew={handleCreateNew}
@@ -1092,8 +1109,7 @@ export function App() {
                 </div>
                 <button
                   onClick={() => {
-                    setAuthModalMode('login');
-                    setIsAuthModalOpen(true);
+                    openAuthModal('login');
                   }}
                   className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg shrink-0 transition-colors cursor-pointer"
                 >
@@ -1396,8 +1412,7 @@ export function App() {
         user={user}
         isAuthenticated={isAuthenticated}
         onOpenAuth={(mode) => {
-          setAuthModalMode(mode || 'login');
-          setIsAuthModalOpen(true);
+          openAuthModal(mode || 'login');
         }}
         onLogout={logout}
         onOpenAdmin={() => navigateWithUnsavedCheck(() => setIsAdminMode(true))}
@@ -1426,8 +1441,7 @@ export function App() {
         securityConfig={currentCv.securityConfig}
         isAuthenticated={isAuthenticated}
         onOpenAuth={(mode) => {
-          setAuthModalMode(mode || 'login');
-          setIsAuthModalOpen(true);
+          openAuthModal(mode || 'login');
         }}
         onTogglePublish={handleTogglePublish}
       />

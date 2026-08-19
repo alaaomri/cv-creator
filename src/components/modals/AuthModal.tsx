@@ -37,6 +37,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     error?: string;
   }>({ checking: false });
 
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -46,6 +47,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (isOpen) {
       setIsLoginMode(initialMode === 'login');
       setError(null);
+      setEmailError(null);
       setSuccessMessage(null);
       setPassword('');
       setConfirmPassword('');
@@ -96,9 +98,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setEmailError(null);
     setSuccessMessage(null);
 
+    const trimmedEmail = email.trim();
+
     if (!isLoginMode) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+        setEmailError('Veuillez saisir une adresse email valide.');
+        return;
+      }
       if (password.length < 6) {
         setError('Le mot de passe doit contenir au moins 6 caractères.');
         return;
@@ -128,7 +137,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         }
       } else {
         const res = await register(
-          email.trim(), 
+          trimmedEmail, 
           password, 
           fullName.trim(), 
           username.trim().toLowerCase()
@@ -138,6 +147,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           setTimeout(() => {
             onClose();
           }, 600);
+        } else if (res.error && /email/i.test(res.error) && /(utilis|exist|pris|déjà)/i.test(res.error)) {
+          setEmailError(res.error);
         } else {
           setError(res.error || 'Erreur lors de la création de votre compte');
         }
@@ -213,6 +224,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => {
                   setIsLoginMode(true);
                   setError(null);
+                  setEmailError(null);
                   setSuccessMessage(null);
                 }}
                 className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
@@ -230,6 +242,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 onClick={() => {
                   setIsLoginMode(false);
                   setError(null);
+                  setEmailError(null);
                   setSuccessMessage(null);
                 }}
                 className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
@@ -354,10 +367,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     required
                     placeholder="nom@exemple.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all"
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      if (emailError) setEmailError(null);
+                    }}
+                    className={`w-full pl-10 pr-3.5 py-2.5 bg-slate-950 border rounded-xl text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 transition-all ${
+                      emailError
+                        ? 'border-rose-600 focus:border-rose-500 focus:ring-rose-500'
+                        : 'border-slate-800 focus:border-sky-500 focus:ring-sky-500'
+                    }`}
                   />
                 </div>
+                {emailError && (
+                  <p className="text-[11px] text-rose-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 shrink-0" />
+                    <span>{emailError}</span>
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -459,6 +485,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       setEmail('admin@cvstudio.cloud');
                       setPassword('AdminSecret2026!');
                       setError(null);
+                      setEmailError(null);
                     }}
                     className="inline-flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-amber-400 font-medium transition-colors bg-slate-950 hover:bg-slate-800 border border-slate-800 rounded-lg px-2.5 py-1 cursor-pointer"
                     title="Remplir automatiquement avec les identifiants administrateur de test"
