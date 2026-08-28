@@ -8,6 +8,11 @@
   # Prisma ships native query engines; keep it external so Netlify includes it as-is.
   external_node_modules = ["@prisma/client"]
 
+# Nightly keep-alive + stats snapshot. Cron is UTC: 03:00 UTC every day.
+# Prevents Supabase's free tier from pausing the project for inactivity.
+[functions."nightly-report"]
+  schedule = "0 3 * * *"
+
 # API traffic is proxied to the Express app running as a serverless function.
 [[redirects]]
   from = "/api/*"

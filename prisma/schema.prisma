@@ -78,3 +78,20 @@ model ExportMetric {
 
   @@map("export_metrics")
 }
+
+// Nightly stats snapshot. Writing a row every night doubles as the keep-alive
+// activity that prevents Supabase's free tier from pausing the project.
+model HealthReport {
+  id        String   @id @default(uuid())
+  users     Int      @default(0)
+  cvs       Int      @default(0)
+  published Int      @default(0)
+  views     Int      @default(0)
+  exports   Int      @default(0)
+  logs      Int      @default(0)
+  source    String   @default("scheduled")
+  payload   Json
+  createdAt DateTime @default(now())
+
+  @@map("health_reports")
+}
