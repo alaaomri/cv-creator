@@ -50,6 +50,7 @@ model CV {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
+  @@index([userId])
   @@map("cvs")
 }
 
@@ -64,6 +65,7 @@ model ActivityLog {
   candidateName String?
   createdAt     DateTime @default(now())
 
+  @@index([userId])
   @@map("activity_logs")
 }
 
