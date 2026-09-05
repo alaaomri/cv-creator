@@ -1,4 +1,10 @@
 import bcrypt from "bcryptjs";
+import { createRequire } from "node:module";
+import path from "node:path";
+
+// Load CJS-only Prisma packages in both ESM (tsx dev) and the CJS bundle (prod).
+// Basing the require on package.json avoids import.meta (invalid in CJS output).
+const nodeRequire = createRequire(path.join(process.cwd(), "package.json"));
 
 // In-memory User Interface
 export interface UserRecord {
@@ -92,8 +98,8 @@ export function getPrisma(): any {
   if (!prismaInstance) {
     try {
       // Dynamic require to prevent compilation issues when Prisma client has not been generated
-      const { PrismaClient } = require("@prisma/client");
-      const { PrismaPg } = require("@prisma/adapter-pg");
+      const { PrismaClient } = nodeRequire("@prisma/client");
+      const { PrismaPg } = nodeRequire("@prisma/adapter-pg");
       // Prisma 7 requires a driver adapter; the connection URL is passed here
       // (the `datasources` constructor option was removed in v7).
       const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
