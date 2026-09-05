@@ -11,8 +11,11 @@ export const handler = async () => {
   const prisma = getPrisma();
 
   if (!prisma) {
-    console.warn("[nightly-report] No DATABASE_URL — skipping (in-memory mode).");
-    return { statusCode: 200, body: "skipped: no database configured" };
+    const reason = process.env.DATABASE_URL
+      ? "Prisma client unavailable (run `prisma generate` in the build)"
+      : "DATABASE_URL not set";
+    console.warn(`[nightly-report] Skipping keep-alive write — ${reason}.`);
+    return { statusCode: 200, body: `skipped: ${reason}` };
   }
 
   try {

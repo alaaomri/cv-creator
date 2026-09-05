@@ -93,13 +93,11 @@ export function getPrisma(): any {
     try {
       // Dynamic require to prevent compilation issues when Prisma client has not been generated
       const { PrismaClient } = require("@prisma/client");
-      prismaInstance = new PrismaClient({
-        datasources: {
-          db: {
-            url: process.env.DATABASE_URL,
-          },
-        },
-      });
+      const { PrismaPg } = require("@prisma/adapter-pg");
+      // Prisma 7 requires a driver adapter; the connection URL is passed here
+      // (the `datasources` constructor option was removed in v7).
+      const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+      prismaInstance = new PrismaClient({ adapter });
       // Prisma connects lazily on the first query, so the client is usable
       // immediately. We still trigger an eager connection for faster warm-up
       // and clearer logs, but we never gate usage on it (that previously made

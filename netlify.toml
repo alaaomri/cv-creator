@@ -3,10 +3,14 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Prisma 7 requires Node >= 20.19; pin to 22 LTS for the build and functions.
+[build.environment]
+  NODE_VERSION = "22"
+
 [functions]
   node_bundler = "esbuild"
   # Prisma ships native query engines; keep it external so Netlify includes it as-is.
-  external_node_modules = ["@prisma/client"]
+  external_node_modules = ["@prisma/client", "@prisma/adapter-pg", "pg"]
 
 # Nightly keep-alive + stats snapshot. Cron is UTC: 03:00 UTC every day.
 # Prevents Supabase's free tier from pausing the project for inactivity.
