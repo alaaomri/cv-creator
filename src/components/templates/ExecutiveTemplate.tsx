@@ -50,6 +50,8 @@ export const ExecutiveTemplate: React.FC<TemplateProps> = ({ data }) => {
         <div className="flex justify-center mb-4">
           <CVAvatar
             avatarUrl={personalInfo.avatarUrl}
+            objectPosition={personalInfo.avatarPosition}
+            zoom={personalInfo.avatarZoom}
             fullName={personalInfo.fullName}
             primaryColor={primaryColor}
             shape={theme.photoShape || 'round'}

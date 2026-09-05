@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PersonalInfo } from '../../types';
 import { 
   User, 
@@ -16,7 +16,10 @@ import {
   AlertCircle,
   FileImage,
   RefreshCw,
-  Camera
+  Camera,
+  Move,
+  ZoomIn,
+  ZoomOut
 } from 'lucide-react';
 
 interface PersonalInfoFormProps {
@@ -56,6 +59,73 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
       fileInputRef.current.value = '';
     }
   };
+
+  // Photo framing: objectPosition stored as "x% y%" (defaults to centered).
+  const [rawPosX, rawPosY] = (personalInfo.avatarPosition || '50% 50%').split(' ');
+  const posX = Number.parseInt(rawPosX, 10) || 50;
+  const posY = Number.parseInt(rawPosY, 10) || 50;
+  const zoom = personalInfo.avatarZoom && personalInfo.avatarZoom >= 1 ? personalInfo.avatarZoom : 1;
+  const setPhotoPosition = (x: number, y: number) => {
+    handleChange('avatarPosition', `${x}% ${y}%`);
+  };
+  const setPhotoZoom = (z: number) => {
+    const clamped = Math.max(1, Math.min(3, Number(z.toFixed(2))));
+    onChange({ ...personalInfo, avatarZoom: clamped });
+  };
+  const recenterPhoto = () => {
+    onChange({ ...personalInfo, avatarPosition: '50% 50%', avatarZoom: 1 });
+  };
+
+  // Drag-to-reposition (Facebook/Instagram style) using pointer events.
+  const photoFrameRef = useRef<HTMLDivElement>(null);
+  const photoDragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const [isDraggingPhoto, setIsDraggingPhoto] = useState(false);
+
+  const clampPct = (v: number) => Math.max(0, Math.min(100, v));
+
+  const handlePhotoPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!personalInfo.avatarUrl) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    photoDragRef.current = { x: e.clientX, y: e.clientY, px: posX, py: posY };
+    setIsDraggingPhoto(true);
+  };
+
+  const handlePhotoPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const drag = photoDragRef.current;
+    const frame = photoFrameRef.current;
+    if (!drag || !frame) return;
+    // Panning is only possible on the zoom-induced overflow; at 1x the cover
+    // image is centered with no room to move.
+    const range = zoom - 1;
+    if (range <= 0) return;
+    const rect = frame.getBoundingClientRect();
+    const dxPct = ((e.clientX - drag.x) / rect.width) * 100;
+    const dyPct = ((e.clientY - drag.y) / rect.height) * 100;
+    const nextX = clampPct(drag.px - dxPct / range);
+    const nextY = clampPct(drag.py - dyPct / range);
+    setPhotoPosition(Math.round(nextX), Math.round(nextY));
+  };
+
+  const handlePhotoPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    photoDragRef.current = null;
+    setIsDraggingPhoto(false);
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
+  // Mouse-wheel zoom over the staging area (non-passive so it can prevent scroll).
+  useEffect(() => {
+    const el = photoFrameRef.current;
+    if (!el || !personalInfo.avatarUrl) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      setPhotoZoom((personalInfo.avatarZoom || 1) + (e.deltaY < 0 ? 0.1 : -0.1));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [personalInfo.avatarUrl, personalInfo.avatarZoom]);
 
   // Helper to optimize and convert uploaded image file to a lightweight data URL
   const processImageFile = (file: File) => {
@@ -516,6 +586,99 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
           <div className="flex items-center gap-1.5 text-[11px] text-rose-600 bg-rose-50 p-2 rounded-lg border border-rose-200">
             <AlertCircle className="w-3.5 h-3.5 shrink-0" />
             <span>{uploadError}</span>
+          </div>
+        )}
+
+        {/* Photo framing: drag to reposition, zoom, and recenter */}
+        {personalInfo.avatarUrl && (
+          <div className="p-2.5 bg-white rounded-lg border border-slate-200 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-700">
+                <Move className="w-3.5 h-3.5 text-sky-600" />
+                Cadrage de la photo
+              </span>
+              <button
+                type="button"
+                onClick={recenterPhoto}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 hover:text-sky-700 bg-sky-50 hover:bg-sky-100 px-2 py-0.5 rounded transition-colors"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Recentrer</span>
+              </button>
+            </div>
+
+            {/* Rectangular staging area shows the full image; the circle overlay
+                marks exactly what will appear as the round avatar. */}
+            <div
+              ref={photoFrameRef}
+              onPointerDown={handlePhotoPointerDown}
+              onPointerMove={handlePhotoPointerMove}
+              onPointerUp={handlePhotoPointerUp}
+              onPointerCancel={handlePhotoPointerUp}
+              className={`relative mx-auto w-full max-w-55 aspect-square rounded-lg overflow-hidden bg-slate-900 select-none ${
+                isDraggingPhoto ? 'cursor-grabbing' : 'cursor-grab'
+              }`}
+              style={{ touchAction: 'none' }}
+            >
+              <img
+                src={personalInfo.avatarUrl}
+                alt="Repositionner la photo"
+                referrerPolicy="no-referrer"
+                draggable={false}
+                className="w-full h-full object-cover pointer-events-none"
+                style={{ transform: `translate(${(50 - posX) * (zoom - 1)}%, ${(50 - posY) * (zoom - 1)}%) scale(${zoom})` }}
+              />
+              {/* Dim everything outside the circular crop area */}
+              <div
+                className="absolute inset-0 rounded-full pointer-events-none"
+                style={{ boxShadow: '0 0 0 9999px rgba(15,23,42,0.55)' }}
+              />
+              {/* Circle outline + rule-of-thirds guides */}
+              <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-white/90" />
+              <div className="absolute inset-0 pointer-events-none opacity-30">
+                <div className="absolute top-1/3 left-0 right-0 h-px bg-white" />
+                <div className="absolute top-2/3 left-0 right-0 h-px bg-white" />
+                <div className="absolute left-1/3 top-0 bottom-0 w-px bg-white" />
+                <div className="absolute left-2/3 top-0 bottom-0 w-px bg-white" />
+              </div>
+            </div>
+
+            {/* Zoom control */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPhotoZoom(zoom - 0.1)}
+                className="p-1 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                title="Dézoomer"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => setPhotoZoom(Number(e.target.value))}
+                className="flex-1 h-1.5 accent-sky-600 cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => setPhotoZoom(zoom + 0.1)}
+                className="p-1 text-slate-500 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
+                title="Zoomer"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[10px] font-semibold text-slate-500 w-9 text-right tabular-nums">
+                {zoom.toFixed(1)}×
+              </span>
+            </div>
+
+            <p className="inline-flex items-center gap-1 text-[10px] text-slate-500">
+              <Move className="w-3 h-3" />
+              Zoomez (molette ou curseur), puis glissez la photo pour la recadrer
+            </p>
           </div>
         )}
       </div>

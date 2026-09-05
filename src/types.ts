@@ -38,6 +38,8 @@ export interface PersonalInfo {
   twitter?: string;
   summary: string;
   avatarUrl: string;
+  avatarPosition?: string;
+  avatarZoom?: number;
 }
 
 export interface ExperienceItem {

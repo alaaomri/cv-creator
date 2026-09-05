@@ -90,6 +90,8 @@ export const CreativeMinimalTemplate: React.FC<TemplateProps> = ({ data }) => {
 
         <CVAvatar
           avatarUrl={personalInfo.avatarUrl}
+          objectPosition={personalInfo.avatarPosition}
+          zoom={personalInfo.avatarZoom}
           fullName={personalInfo.fullName}
           primaryColor={primaryColor}
           shape={theme.photoShape || 'round'}

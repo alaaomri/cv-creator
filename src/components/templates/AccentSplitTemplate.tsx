@@ -54,6 +54,8 @@ export const AccentSplitTemplate: React.FC<TemplateProps> = ({ data }) => {
             <div className="flex justify-center mb-3">
               <CVAvatar
                 avatarUrl={personalInfo.avatarUrl}
+                objectPosition={personalInfo.avatarPosition}
+                zoom={personalInfo.avatarZoom}
                 fullName={personalInfo.fullName}
                 primaryColor={primaryColor}
                 shape={theme.photoShape || 'round'}

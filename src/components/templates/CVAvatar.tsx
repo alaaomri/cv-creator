@@ -15,6 +15,8 @@ interface CVAvatarProps {
   borderClassName?: string;
   withStatusBadge?: boolean;
   extraImgClass?: string;
+  objectPosition?: string;
+  zoom?: number;
 }
 
 export const CVAvatar: React.FC<CVAvatarProps> = ({
@@ -29,6 +31,8 @@ export const CVAvatar: React.FC<CVAvatarProps> = ({
   borderClassName = 'border-2',
   withStatusBadge = false,
   extraImgClass = '',
+  objectPosition = '50% 50%',
+  zoom = 1,
 }) => {
   const [imageError, setImageError] = useState(false);
   const { isInteractive } = usePreviewEdit();
@@ -50,16 +54,28 @@ export const CVAvatar: React.FC<CVAvatarProps> = ({
 
   // If avatarUrl exists and has not errored
   if (avatarUrl && !imageError) {
+    // Translate-based framing: focal point (0-100) + zoom map to a pan offset
+    // that is inherently clamped to the image edges. Must match the editor.
+    const [fxRaw, fyRaw] = (objectPosition || '50% 50%').split(' ');
+    const focalX = Number.isFinite(Number.parseInt(fxRaw, 10)) ? Number.parseInt(fxRaw, 10) : 50;
+    const focalY = Number.isFinite(Number.parseInt(fyRaw, 10)) ? Number.parseInt(fyRaw, 10) : 50;
+    const translateX = (50 - focalX) * (zoom - 1);
+    const translateY = (50 - focalY) * (zoom - 1);
     return (
       <div className={`relative shrink-0 ${className}`}>
-        <img
-          src={avatarUrl}
-          alt={fullName || 'Photo de profil'}
-          referrerPolicy="no-referrer"
-          onError={() => setImageError(true)}
-          className={`${sizeClassName} ${shapeClass} ${borderClassName} object-cover shadow-sm ${extraImgClass}`}
+        <div
+          className={`${sizeClassName} ${shapeClass} ${borderClassName} overflow-hidden shadow-sm`}
           style={{ borderColor: primaryColor }}
-        />
+        >
+          <img
+            src={avatarUrl}
+            alt={fullName || 'Photo de profil'}
+            referrerPolicy="no-referrer"
+            onError={() => setImageError(true)}
+            className={`w-full h-full object-cover ${extraImgClass}`}
+            style={{ transform: `translate(${translateX}%, ${translateY}%) scale(${zoom})` }}
+          />
+        </div>
         {withStatusBadge && (
           <div 
             className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white" 
